@@ -52,7 +52,7 @@ run_feature <- main_opts %>% filter(option == "run feature?") %>% pull(value)
 specimen_ids <- read_excel(multi_config_path,sheet = "specimen_ids") %>% pull()
 
 # make a directory to hold the config files
-dir.create(paste0(processing_dir,"/temp_csv_configs/multi_configs",recursive = T))
+dir.create(paste0(processing_dir,"/temp_csv_configs/multi_configs"), recursive = T)
 
 # generate the configuration file for mkfastq
 read_excel(multi_config_path, sheet = "mkfastq_config") %>% write_csv(paste0(processing_dir,"/temp_csv_configs/mkfastq_config.csv"))
@@ -116,7 +116,7 @@ walk(
     library_config <-
       read_excel(config, sheet = "library_config") %>%
       filter(specimen == x) %>%
-      mutate(fastqs = paste0(fastqs_stub, Sample)) %>%
+      mutate(fastqs = paste0(fastqs_stub)) %>%
       select(fastq_id = Sample, fastqs, lanes, feature_types, subsample_rate) %>%
       mutate(concat = paste(fastq_id, fastqs, lanes, feature_types, subsample_rate, sep = ",")) %>%
       pull(concat)
@@ -131,7 +131,8 @@ walk(
     
     cat_list <-
       cat_list[!str_detect(cat_list, pattern = "skipthis")]
-    
+    print(cat_list)
+
     cat(
       unlist(cat_list),
       sep = "\n",
@@ -166,8 +167,7 @@ if (run_mkfastq == TRUE){
   cmd <- paste0("cellranger mkfastq --id=",exid,
                " --run=",bcl_fp,
                " --csv=temp_csv_configs/mkfastq_config.csv",
-               " --ignore-dual-index",
-               " --qc",
+               " --filter-single-index",
                " --use-bases-mask=",mask)
   message(cmd, "\n")
   system(cmd)
