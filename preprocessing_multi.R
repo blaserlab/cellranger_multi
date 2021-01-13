@@ -33,7 +33,7 @@ dir.create(output_folder)
 untar_bcl <- main_opts %>% filter(option == "untar bcl?") %>% pull(value)
 
 if (untar_bcl == TRUE) {
-  bcl_tar_fp <- main_opts %>% filter(option == "bcl filename") %>% pull(value)
+  bcl_tar_fp <- main_opts %>% filter(option == "bcl filepath") %>% pull(value)
 }
 
 # option to run mkfastq
