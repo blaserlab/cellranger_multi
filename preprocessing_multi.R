@@ -15,6 +15,10 @@ main_opts <- read_excel(multi_config_path, sheet = "main_opts")
 
 exid <- main_opts %>% filter(option == "experiment id") %>% pull(value)
 
+# working directory for processing
+
+processing_dir <- main_opts %>% filter(option == "processing directory") %>% pull(value)
+
 # final destination
 final_destination <- main_opts %>% filter(option == "final destination") %>% pull(value)
 
@@ -29,7 +33,7 @@ dir.create(output_folder)
 untar_bcl <- main_opts %>% filter(option == "untar bcl?") %>% pull(value)
 
 if (untar_bcl == TRUE) {
-  bcl_tar_fp <- paste0("/workspace//workspace_pipelines/bcl_holding/", main_opts %>% filter(option == "bcl filename") %>% pull(value))
+  bcl_tar_fp <- main_opts %>% filter(option == "bcl filename") %>% pull(value)
 }
 
 # option to run mkfastq
@@ -48,10 +52,10 @@ run_feature <- main_opts %>% filter(option == "run feature?") %>% pull(value)
 specimen_ids <- read_excel(multi_config_path,sheet = "specimen_ids") %>% pull()
 
 # make a directory to hold the config files
-dir.create("/workspace/workspace_pipelines/OSUBlaserlab_analyses/brad/scrnaseq_analysis/preprocessing/temp_csv_configs/multi_configs",recursive = T)
+dir.create(paste0(processing_dir,"/temp_csv_configs/multi_configs",recursive = T))
 
 # generate the configuration file for mkfastq
-read_excel(multi_config_path, sheet = "mkfastq_config") %>% write_csv("/workspace/workspace_pipelines/OSUBlaserlab_analyses/brad/scrnaseq_analysis/preprocessing/temp_csv_configs/mkfastq_config.csv")
+read_excel(multi_config_path, sheet = "mkfastq_config") %>% write_csv(paste0(processing_dir,"/temp_csv_configs/mkfastq_config.csv"))
 
 # generate the multi config files
 
@@ -144,7 +148,7 @@ walk(
 
 
 # set the working directory for preprocessing
-setwd("~/workspace_pipelines/OSUBlaserlab_analyses/brad/scrnaseq_analysis/preprocessing")
+setwd(processing_dir)
 
 
 # untar bcl ####-------------------------------------------------------------------------------
