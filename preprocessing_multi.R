@@ -1,0 +1,215 @@
+#!/usr/bin/Rscript --vanilla
+
+#set wd
+library("tidyverse")
+library("readxl")
+
+
+# config ####--------------------------------------------------------------------------------
+# path to mutli_config
+multi_config_path <- commandArgs(trailingOnly = TRUE) 
+
+main_opts <- read_excel(multi_config_path, sheet = "main_opts")
+
+# experiment identifier
+
+exid <- main_opts %>% filter(option == "experiment id") %>% pull(value)
+
+# final destination
+final_destination <- main_opts %>% filter(option == "final destination") %>% pull(value)
+
+# generate a timestamp for the output folder
+dt_stamp<-str_replace_all(string = Sys.time(), pattern = "([-\\s:ESTD])",replacement = "")
+
+# create the output folder
+output_folder <- paste0(final_destination,"/output_",exid,"_",dt_stamp)
+dir.create(output_folder)
+
+# option to untar bcl
+untar_bcl <- main_opts %>% filter(option == "untar bcl?") %>% pull(value)
+
+if (untar_bcl == TRUE) {
+  bcl_tar_fp <- paste0("/workspace//workspace_pipelines/bcl_holding/", main_opts %>% filter(option == "bcl filename") %>% pull(value))
+}
+
+# option to run mkfastq
+run_mkfastq <- main_opts %>% filter(option == "run mkfastq?") %>% pull(value)
+
+if (run_mkfastq == TRUE) {
+  mask <- main_opts %>% filter(option == "mask") %>% pull(value)
+}
+
+# run options
+run_multi <- main_opts %>% filter(option == "run multi?") %>% pull(value)
+run_vdj <- main_opts %>% filter(option == "run vdj?") %>% pull(value)
+run_feature <- main_opts %>% filter(option == "run feature?") %>% pull(value)
+
+# make a vector holding the sample ids
+specimen_ids <- read_excel(multi_config_path,sheet = "specimen_ids") %>% pull()
+
+# make a directory to hold the config files
+dir.create("/workspace/workspace_pipelines/OSUBlaserlab_analyses/brad/scrnaseq_analysis/preprocessing/temp_csv_configs/multi_configs",recursive = T)
+
+# generate the configuration file for mkfastq
+read_excel(multi_config_path, sheet = "mkfastq_config") %>% write_csv("/workspace/workspace_pipelines/OSUBlaserlab_analyses/brad/scrnaseq_analysis/preprocessing/temp_csv_configs/mkfastq_config.csv")
+
+# generate the multi config files
+
+walk(
+  .x = specimen_ids,
+  .f = function(x,
+                config = multi_config_path,
+                vdj = run_vdj,
+                feature = run_feature) {
+    # read in each section, filter and reassemble into a plain text file with cat
+    
+    # gex
+    gex_config <- read_excel(config, sheet = "gex_config") %>%
+      filter(specimen == x)
+    gex_config_section <-
+      paste0(
+        "[gene-expression]\nreference,",
+        gex_config$reference,
+        "\n",
+        "expect-cells,",
+        gex_config$expect_cells
+      )
+    
+    # # feature
+    feature_config <-
+      possibly(
+        .f = function(x) {
+          read_excel(config, sheet = "feature_config") %>% filter(specimen == x)
+        },
+        otherwise = NULL
+      )
+    feature_config_section <-
+      ifelse(
+        feature == TRUE,
+        paste0("[feature]\nreference,", feature_config$reference),
+        "skipthis"
+      )
+    
+    # # vdj
+    vdj_config <-
+      possibly(
+        .f = function(x) {
+          read_excel(config, sheet = "vdj_config") %>% filter(specimen == x)
+        },
+        otherwise = NULL
+      )
+    vdj_config_section <-
+      ifelse(vdj == TRUE,
+             paste0("[vdj]\nreference,", vdj_config$reference),
+             "skipthis")
+    
+    # library
+    ## header
+    library_config_header <-
+      paste0("[libraries]\nfastq_id,fastqs,lanes,feature_types,subsample_rate")
+    
+    ## data
+    library_config <-
+      read_excel(config, sheet = "library_config") %>%
+      filter(specimen == x) %>%
+      mutate(fastqs = paste0(fastqs_stub, Sample)) %>%
+      select(fastq_id = Sample, fastqs, lanes, feature_types, subsample_rate) %>%
+      mutate(concat = paste(fastq_id, fastqs, lanes, feature_types, subsample_rate, sep = ",")) %>%
+      pull(concat)
+    
+    cat_list <- list(
+      gex_config_section,
+      feature_config_section,
+      vdj_config_section,
+      library_config_header,
+      library_config
+    )
+    
+    cat_list <-
+      cat_list[!str_detect(cat_list, pattern = "skipthis")]
+    
+    cat(
+      unlist(cat_list),
+      sep = "\n",
+      file = paste0(
+        "/workspace/workspace_pipelines/OSUBlaserlab_analyses/brad/scrnaseq_analysis/preprocessing/temp_csv_configs/multi_configs/multi_config_",
+        x,
+        ".csv"
+      )
+    )
+    
+  }
+)
+
+
+
+# set the working directory for preprocessing
+setwd("~/workspace_pipelines/OSUBlaserlab_analyses/brad/scrnaseq_analysis/preprocessing")
+
+
+# untar bcl ####-------------------------------------------------------------------------------
+if (untar_bcl == TRUE) {
+  dir.create("bcl")
+  cmd <- paste0("tar xf ",bcl_tar_fp," --directory bcl")
+  message(cmd, "\n")
+  system(cmd)
+}
+
+# mkfastq ####---------------------------------------------------------------------------------
+
+if (run_mkfastq == TRUE){
+  bcl_fp <- list.files("bcl", full.names = T)
+  cmd <- paste0("cellranger mkfastq --id=",exid,
+               " --run=",bcl_fp,
+               " --csv=temp_csv_configs/mkfastq_config.csv",
+               " --ignore-dual-index",
+               " --qc",
+               " --use-bases-mask=",mask)
+  message(cmd, "\n")
+  system(cmd)
+  
+}
+
+# cellranger multi ####-------------------------------------------------------------------------
+
+if (run_multi == T) {
+  pmap(
+    .l = list(
+      id = specimen_ids,
+      csv = list.files("temp_csv_configs/multi_configs", full.names = T)
+    ),
+    .f = function(id, csv, out = output_folder) {
+      # make the pipestance folder for the multi specimen
+      cmd <- paste0("cellranger multi --id=", id, " --csv=", csv)
+      message(cmd, "\n")
+      system(cmd)
+      
+      # copy the pipestance folder to the network archive location
+      cmd <- paste0("rsync -avz ", id," ", out)
+      message(cmd, "\n")
+      system(cmd)
+      
+      # remove the local pipestance folder to save room
+      cmd <- paste0("rm -rf ", id)
+      message(cmd, "\n")
+      system(cmd)
+    }
+  )
+  
+}
+
+# copy over script
+
+cmd <- paste0("rsync -avz preprocessing_multi.R ",output_folder)
+message(cmd, "\n")
+system(cmd)
+
+# copy over fastqs
+cmd <- paste0("rsync -avz ",exid, " ", output_folder)
+message(cmd, "\n")
+system(cmd)
+
+# clean up the configs
+unlink("temp_csv_configs", recursive = T)
+
+# go back and remove the fastqs and bcl files by hand if everything works ok.
