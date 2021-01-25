@@ -49,7 +49,7 @@ run_vdj <- main_opts %>% filter(option == "run vdj?") %>% pull(value)
 run_feature <- main_opts %>% filter(option == "run feature?") %>% pull(value)
 
 # make a vector holding the sample ids
-specimen_ids <- read_excel(multi_config_path,sheet = "specimen_ids") %>% pull()
+specimen_ids <- read_excel(multi_config_path,sheet = "specimen_ids") %>% pull(specimen)
 
 # make a directory to hold the config files
 dir.create(paste0(processing_dir,"/temp_csv_configs/multi_configs"), recursive = T)
@@ -80,38 +80,26 @@ walk(
       )
     
     # # feature
-    feature_config <-
-      possibly(
-        .f = function(x) {
-          read_excel(config, sheet = "feature_config") %>% filter(specimen == x)
-        },
-        otherwise = NULL
-      )
-    feature_config_section <-
-      ifelse(
-        feature == TRUE,
-        paste0("[feature]\nreference,", feature_config$reference),
-        "skipthis"
-      )
+    if (feature == TRUE) {
+      feature_config <- read_excel(config, sheet = "feature_config") %>% filter(specimen == x)
+      feature_config_section <- paste0("[feature]\nreference,", feature_config$reference)
+    } else {
+      feature_config_section <- "skipthis"
+    }
     
-    # # vdj
-    vdj_config <-
-      possibly(
-        .f = function(x) {
-          read_excel(config, sheet = "vdj_config") %>% filter(specimen == x)
-        },
-        otherwise = NULL
-      )
-    vdj_config_section <-
-      ifelse(vdj == TRUE,
-             paste0("[vdj]\nreference,", vdj_config$reference),
-             "skipthis")
+    # vdj
+    if (vdj == TRUE) {
+      vdj_config <- read_excel(config, sheet = "vdj_config") %>% filter(specimen == x)
+      vdj_config_section <- paste0("[vdj]\nreference,", vdj_config$reference)
+    } else {
+      vdj_config_section <- "skipthis"
+    }
     
     # library
     ## header
     library_config_header <-
       paste0("[libraries]\nfastq_id,fastqs,lanes,feature_types,subsample_rate")
-    
+
     ## data
     library_config <-
       read_excel(config, sheet = "library_config") %>%
@@ -120,7 +108,7 @@ walk(
       select(fastq_id = Sample, fastqs, lanes, feature_types, subsample_rate) %>%
       mutate(concat = paste(fastq_id, fastqs, lanes, feature_types, subsample_rate, sep = ",")) %>%
       pull(concat)
-    
+
     cat_list <- list(
       gex_config_section,
       feature_config_section,
@@ -128,7 +116,7 @@ walk(
       library_config_header,
       library_config
     )
-    
+
     cat_list <-
       cat_list[!str_detect(cat_list, pattern = "skipthis")]
     print(cat_list)
@@ -142,7 +130,6 @@ walk(
         ".csv"
       )
     )
-    
   }
 )
 
@@ -168,6 +155,7 @@ if (run_mkfastq == TRUE){
                " --run=",bcl_fp,
                " --csv=temp_csv_configs/mkfastq_config.csv",
                " --filter-single-index",
+	       " --barcode-mismatches=0",
                " --use-bases-mask=",mask)
   message(cmd, "\n")
   system(cmd)
