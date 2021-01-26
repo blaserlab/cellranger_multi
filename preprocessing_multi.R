@@ -163,12 +163,18 @@ if (run_mkfastq == TRUE){
 }
 
 # cellranger multi ####-------------------------------------------------------------------------
+csvs_ordered <- map_chr(.x = specimen_ids,
+			.f = function(x, parent_dir = "temp_csv_configs/multi_configs") {
+	                  return(list.files(parent_dir,full.names = T,pattern = x))
+                        })
+
+
 
 if (run_multi == T) {
   pmap(
     .l = list(
       id = specimen_ids,
-      csv = list.files("temp_csv_configs/multi_configs", full.names = T)
+      csv = csvs_ordered
     ),
     .f = function(id, csv, out = output_folder) {
       # make the pipestance folder for the multi specimen
