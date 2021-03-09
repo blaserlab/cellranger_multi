@@ -125,7 +125,7 @@ walk(
       unlist(cat_list),
       sep = "\n",
       file = paste0(
-        "/workspace/workspace_pipelines/OSUBlaserlab_analyses/brad/scrnaseq_analysis/preprocessing/temp_csv_configs/multi_configs/multi_config_",
+        processing_dir,"/temp_csv_configs/multi_configs/multi_config_",
         x,
         ".csv"
       )
