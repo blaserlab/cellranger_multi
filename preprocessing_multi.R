@@ -153,7 +153,8 @@ if (run_mkfastq == TRUE) {
   if (untar_bcl == TRUE) {
 	  bcl_fp <- list.files("bcl", full.names = T)
   } else {
-	  bcl_fp  <- main_opts %>% filter(option == "bcl filepath") %>% pull(value) 
+	  bcl_fp  <- main_opts %>% filter(option == "bcl filepath") %>% pull(value)
+  }
   cmd <- paste0("cellranger mkfastq --id=",exid,
                " --run=",bcl_fp,
                " --csv=temp_csv_configs/mkfastq_config.csv",
