@@ -15,6 +15,10 @@ main_opts <- read_excel(multi_config_path, sheet = "main_opts")
 
 exid <- main_opts %>% filter(option == "experiment id") %>% pull(value)
 
+# library indexing
+
+dual_index <- main_opts %>% filter(option == "dual index library?") %>% pull(value)
+
 # working directory for processing
 
 processing_dir <- main_opts %>% filter(option == "processing directory") %>% pull(value)
@@ -152,15 +156,28 @@ if (untar_bcl == TRUE) {
 if (run_mkfastq == TRUE) {
   if (untar_bcl == TRUE) {
 	  bcl_fp <- list.files("bcl", full.names = T)
+
   } else {
 	  bcl_fp  <- main_opts %>% filter(option == "bcl filepath") %>% pull(value)
   }
-  cmd <- paste0("cellranger mkfastq --id=",exid,
+  cmd <- paste0("dos2unix ",bcl_fp,"/SampleSheet.csv")
+  message(cmd, "\n")
+  system(cmd)
+  if (dual_index == TRUE) {
+ 	  cmd <- paste0("cellranger mkfastq --id=",exid,
+               " --run=",bcl_fp,
+               " --csv=temp_csv_configs/mkfastq_config.csv",
+               " --filter-dual-index",
+	       " --barcode-mismatches=0",
+               " --use-bases-mask=",mask)
+  } else {
+	  cmd <- paste0("cellranger mkfastq --id=",exid,
                " --run=",bcl_fp,
                " --csv=temp_csv_configs/mkfastq_config.csv",
                " --filter-single-index",
 	       " --barcode-mismatches=0",
                " --use-bases-mask=",mask)
+}
   message(cmd, "\n")
   system(cmd)
   
