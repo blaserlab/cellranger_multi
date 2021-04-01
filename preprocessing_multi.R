@@ -84,16 +84,16 @@ walk(
       )
     
     # # feature
-    if (feature == TRUE) {
-      feature_config <- read_excel(config, sheet = "feature_config") %>% filter(specimen == x)
+    feature_config <- read_excel(config, sheet = "feature_config") %>% filter(specimen == x)
+    if (feature == TRUE && nrow(feature_config)==1) {
       feature_config_section <- paste0("[feature]\nreference,", feature_config$reference)
     } else {
       feature_config_section <- "skipthis"
     }
     
     # vdj
-    if (vdj == TRUE) {
-      vdj_config <- read_excel(config, sheet = "vdj_config") %>% filter(specimen == x)
+    vdj_config <- read_excel(config, sheet = "vdj_config") %>% filter(specimen == x)
+    if (vdj == TRUE && nrow(vdj_config)==1) {
       vdj_config_section <- paste0("[vdj]\nreference,", vdj_config$reference)
     } else {
       vdj_config_section <- "skipthis"
