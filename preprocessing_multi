@@ -231,4 +231,7 @@ system(cmd)
 # clean up the configs
 unlink("temp_csv_configs", recursive = T)
 
+# clean up the bcl folder
+unlink("bcl", recursive = T)
+
 # go back and remove the fastqs and bcl files by hand if everything works ok.
