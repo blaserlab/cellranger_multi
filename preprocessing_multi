@@ -219,7 +219,7 @@ if (run_multi == T) {
 
 # copy over script
 
-cmd <- paste0("rsync -avz preprocessing_multi",output_folder)
+cmd <- paste0("rsync -avz preprocessing_multi ",output_folder)
 message(cmd, "\n")
 system(cmd)
 
