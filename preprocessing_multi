@@ -186,7 +186,7 @@ if (run_mkfastq == TRUE) {
 # cellranger multi ####-------------------------------------------------------------------------
 csvs_ordered <- map_chr(.x = specimen_ids,
 			.f = function(x, parent_dir = "temp_csv_configs/multi_configs") {
-	                  return(list.files(parent_dir,full.names = T,pattern = x))
+	                  return(list.files(parent_dir,full.names = T,pattern = str_glue("multi_config_{x}.csv")))
                         })
 
 
