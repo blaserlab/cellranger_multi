@@ -1,5 +1,7 @@
 # cellranger_multi
 
+* clone and put the repo top level directory (cellranger_multi) on your $PATH
+
 * run with 
 
 ```
