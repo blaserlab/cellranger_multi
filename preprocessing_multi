@@ -9,7 +9,7 @@ library("readxl")
 # path to mutli_config
 multi_config_path <- commandArgs(trailingOnly = TRUE) 
 
-main_opts <- read_excel(multi_config_path, sheet = "main_opts")
+main_opts <- read_excel(multi_config_path, sheet = "main_opts", na = c("NA"))
 
 # experiment identifier
 
@@ -46,6 +46,8 @@ run_mkfastq <- main_opts %>% filter(option == "run mkfastq?") %>% pull(value)
 if (run_mkfastq == TRUE) {
   mask <- main_opts %>% filter(option == "mask") %>% pull(value)
 }
+
+main_opts
 
 # run options
 run_multi <- main_opts %>% filter(option == "run multi?") %>% pull(value)
@@ -176,7 +178,7 @@ if (run_mkfastq == TRUE) {
                " --filter-single-index",
 	       " --barcode-mismatches=0")
 }
-  if (!is.null(mask)) {
+  if (mask != "autodetect") {
     cmd <- paste0(cmd, " --use-bases-mask=", mask)
   } 
   message(cmd, "\n")
