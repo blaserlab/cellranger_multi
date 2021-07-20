@@ -168,16 +168,17 @@ if (run_mkfastq == TRUE) {
                " --run=",bcl_fp,
                " --csv=temp_csv_configs/mkfastq_config.csv",
                " --filter-dual-index",
-	       " --barcode-mismatches=0",
-               " --use-bases-mask=",mask)
+	       " --barcode-mismatches=0")
   } else {
 	  cmd <- paste0("cellranger mkfastq --id=",exid,
                " --run=",bcl_fp,
                " --csv=temp_csv_configs/mkfastq_config.csv",
                " --filter-single-index",
-	       " --barcode-mismatches=0",
-               " --use-bases-mask=",mask)
+	       " --barcode-mismatches=0")
 }
+  if (!is.null(mask)) {
+    cmd <- paste0(cmd, " --use-bases-mask=", mask)
+  } 
   message(cmd, "\n")
   system(cmd)
   
